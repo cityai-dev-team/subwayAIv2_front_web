@@ -1,0 +1,41 @@
+name: ${PROJECT}_front_web_prod
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - BUILDKIT_INLINE_CACHE=1
+    image: ${IMAGE_NAME:-subwayaiv2-front-web}:prod
+    container_name: ${C_WEB}
+    env_file:
+      - .env.prod
+    environment:
+      APP_PORT: ${APP_PORT:-3001}
+    ports:
+    - "${APP_PORT:-3001}:3001"
+    networks:
+    - net
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --quiet
+      - --tries=1
+      - --spider
+      - http://localhost:3001/
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+networks:
+  net:
+    external: true
+    name: ${NET}
+

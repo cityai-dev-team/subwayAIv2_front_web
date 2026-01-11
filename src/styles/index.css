@@ -1,0 +1,313 @@
+/* src/index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────
+   Design Tokens (CSS Variables) — data-theme: white | gray | black
+   기본값(:root)은 white 테마와 동일하게 설정
+────────────────────────────────────────────────────────────── */
+:root,
+html[data-theme="white"] {
+  /* surfaces */
+  --color-app-bg:        #ffffff;
+  --color-top-bg:        rgba(255,255,255,.8);
+  --color-side-bg:       #f8fafc;  /* slate-50 */
+  --color-main-bg:       #ffffff;
+
+  /* content */
+  --color-text:          #0f172a;  /* slate-900 */
+  --color-subtext:       #475569;  /* slate-600 */
+  --color-border:        #e2e8f0;  /* slate-200 */
+  --color-input-bg:      #ffffff;
+  --color-hover-bg:      #eff6ff;  /* blue-50 */
+
+  /* accent: Blue */
+  --color-accent:              #2563eb; /* blue-600 */
+  --color-accent-hover:        #1d4ed8; /* blue-700 */
+  --color-accent-foreground:   #ffffff;
+  --color-accent-soft:         #eff6ff; /* blue-50 */
+  --color-accent-ring:         rgba(37,99,235,.4);
+
+  /* links */
+  --color-link:                #2563eb; /* blue-600 */
+  --color-link-hover:          #1d4ed8; /* blue-700 */
+  --color-link-visited:        #7c3aed; /* violet-600 */
+
+  /* side active */
+  --color-side-active-bg:      #2563eb; /* blue-600 */
+  --color-side-active-fg:      #ffffff;
+}
+
+html[data-theme="gray"] {
+  --color-app-bg:        #fafafa;   /* zinc-50-ish */
+  --color-top-bg:        rgba(255,255,255,.7);
+  --color-side-bg:       #f4f4f5;   /* zinc-100 */
+  --color-main-bg:       #fafafa;
+
+  --color-text:          #18181b;   /* zinc-900 */
+  --color-subtext:       #52525b;   /* zinc-600 */
+  --color-border:        #e4e4e7;   /* zinc-200 */
+  --color-input-bg:      #ffffff;
+  --color-hover-bg:      #e4e4e7;   /* zinc-200 */
+
+  /* accent: Indigo */
+  --color-accent:              #4f46e5; /* indigo-600 */
+  --color-accent-hover:        #4338ca; /* indigo-700 */
+  --color-accent-foreground:   #ffffff;
+  --color-accent-soft:         #eef2ff; /* indigo-50 */
+  --color-accent-ring:         rgba(79,70,229,.4);
+
+  /* links */
+  --color-link:                #4f46e5; /* indigo-600 */
+  --color-link-hover:          #4338ca; /* indigo-700 */
+  --color-link-visited:        #7c3aed; /* violet-600 */
+
+  --color-side-active-bg:      #4f46e5;
+  --color-side-active-fg:      #ffffff;
+}
+
+html[data-theme="black"] {
+  --color-app-bg:        #0a0a0a;  /* neutral-950 */
+  --color-top-bg:        rgba(10,10,10,.7);
+  --color-side-bg:       #171717;  /* neutral-900 */
+  --color-main-bg:       #0a0a0a;
+
+  --color-text:          #f5f5f5;  /* neutral-100 */
+  --color-subtext:       #a3a3a3;  /* neutral-400 */
+  --color-border:        #262626;  /* neutral-800 */
+  --color-input-bg:      #171717;
+  --color-hover-bg:      #262626;  /* neutral-800 */
+
+  /* accent: Emerald */
+  --color-accent:              #10b981; /* emerald-500 */
+  --color-accent-hover:        #34d399; /* emerald-400 */
+  --color-accent-foreground:   #0a0a0a; /* dark fg */
+  --color-accent-soft:         rgba(16,185,129,.12);
+  --color-accent-ring:         rgba(16,185,129,.45);
+
+  /* links */
+  --color-link:                #34d399; /* emerald-400 - 밝은 색상으로 가독성 향상 */
+  --color-link-hover:          #10b981; /* emerald-500 */
+  --color-link-visited:        #a78bfa; /* violet-400 - 밝은 색상 */
+
+  --color-side-active-bg:      #10b981;
+  --color-side-active-fg:      #ffffff; /* 밝은 흰색으로 가독성 향상 */
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Base Styles
+────────────────────────────────────────────────────────────── */
+html, body {
+  height: 100%;
+}
+
+body {
+  background: var(--color-app-bg);
+  color: var(--color-text);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 사이드바 활성 메뉴 스타일 강화 */
+.bg-side-active-bg {
+  background-color: var(--color-side-active-bg) !important;
+}
+
+.text-side-active-fg {
+  color: var(--color-side-active-fg) !important;
+}
+
+/* 사이드바 메뉴 아이템 강제 스타일 */
+nav a.bg-side-active-bg,
+nav button.bg-side-active-bg,
+nav div.bg-side-active-bg {
+  background-color: var(--color-side-active-bg) !important;
+  color: var(--color-side-active-fg) !important;
+}
+
+nav a.bg-side-active-bg span,
+nav button.bg-side-active-bg span,
+nav div.bg-side-active-bg span {
+  color: var(--color-side-active-fg) !important;
+}
+
+/* 사이드바 메뉴 스타일 개선 */
+nav a, nav button, nav div[role="heading"] {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  cursor: pointer;
+}
+
+/* 사이드바 메뉴 포커스 스타일 개선 */
+nav a:focus,
+nav button:focus,
+nav div[role="heading"]:focus {
+  outline: 2px solid var(--color-accent-ring) !important;
+  outline-offset: 2px !important;
+}
+
+/* 사이드바 메뉴 텍스트 선택 방지 */
+nav span {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+}
+
+/* 링크 스타일 */
+a, .text-link {
+  color: var(--color-link) !important;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+a:hover, .text-link:hover, .hover\:text-link-hover:hover {
+  color: var(--color-link-hover) !important;
+  text-decoration-color: var(--color-link-hover);
+}
+
+a:visited, .text-link-visited {
+  color: var(--color-link-visited) !important;
+}
+
+a:focus, .text-link:focus {
+  outline: 2px solid var(--color-accent-ring);
+  outline-offset: 2px;
+}
+
+/* 네비게이션 링크 색상 고정 (색상 변경 방지) */
+.nav-link-fixed,
+.nav-link-fixed:link,
+.nav-link-fixed:visited,
+.nav-link-fixed:hover,
+.nav-link-fixed:active,
+.nav-link-fixed:focus {
+  color: black !important;
+}
+
+.nav-link-fixed span {
+  color: black !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Component Classes (Tailwind와 통합)
+────────────────────────────────────────────────────────────── */
+@layer components {
+  /* 카드 컴포넌트 */
+  .card {
+    @apply bg-main-bg border border-app-border rounded-card p-card shadow-sm;
+  }
+
+  /* 입력 필드 */
+  .input {
+    @apply bg-app-input text-app-text border border-app-border rounded-input px-input py-2 h-10;
+  }
+  
+  .input:disabled {
+    @apply opacity-70 cursor-not-allowed bg-gray-100;
+  }
+  
+  .input::placeholder {
+    @apply text-app-subtext;
+  }
+  
+  .input:focus-visible {
+    @apply outline-2 outline-accent-ring outline-offset-2;
+  }
+
+  /* 버튼 */
+  .btn {
+    @apply bg-main-bg text-app-text border border-app-border rounded-input px-3 h-10;
+  }
+  
+  .btn:hover {
+    @apply bg-app-hover;
+  }
+  
+  .btn:disabled {
+    @apply opacity-60 cursor-not-allowed;
+  }
+  
+  .btn:focus-visible {
+    @apply outline-2 outline-accent-ring outline-offset-2;
+  }
+
+  /* 강조 버튼 */
+  .btn-accent {
+    @apply bg-accent text-accent-foreground border-accent;
+  }
+  
+  .btn-accent:hover {
+    @apply bg-accent-hover;
+  }
+
+  /* 사이드바 활성 상태 */
+  .side-active {
+    @apply bg-side-active-bg text-side-active-fg;
+  }
+
+  /* 테이블 폼 */
+  .table-form {
+    @apply grid grid-cols-[120px_1fr] gap-y-3 gap-x-4 items-center border border-app-border rounded-card p-4 bg-main-bg;
+  }
+  
+  .table-form .label {
+    @apply text-app-subtext text-sm border-b border-app-border pb-2;
+  }
+  
+  .table-form .control {
+    @apply border-b border-app-border pb-2;
+  }
+
+  /* 반응형 유틸리티 클래스 */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  .grid-responsive {
+    @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+
+  .text-responsive {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+
+  .heading-responsive {
+    @apply text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold;
+  }
+
+  .padding-responsive {
+    @apply p-4 sm:p-6 lg:p-8 xl:p-10;
+  }
+
+  .flex-responsive {
+    @apply flex flex-col sm:flex-row;
+  }
+
+  .items-responsive {
+    @apply items-start sm:items-center;
+  }
+
+  .justify-responsive {
+    @apply justify-start sm:justify-center lg:justify-between;
+  }
+
+  .hide-mobile {
+    @apply hidden sm:block;
+  }
+
+  .show-mobile {
+    @apply block sm:hidden;
+  }
+
+  .hide-tablet {
+    @apply hidden lg:block;
+  }
+
+  .show-tablet {
+    @apply block lg:hidden;
+  }
+}
