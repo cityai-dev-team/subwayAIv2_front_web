@@ -2,7 +2,7 @@ import { Card } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import type { CCTVItem } from '../types';
 import { getRiskColor, getRiskLevelText } from '../utils/riskUtils';
-import { getCongestionColor } from '../utils/congestionUtils';
+import { getCongestionColor, getCongestionLevel } from '../utils/congestionUtils';
 
 interface CCTVListProps {
   cctvList: CCTVItem[];

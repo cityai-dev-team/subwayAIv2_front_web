@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../../../lib/api';
-import type { DashboardData, OverviewStats, RegionSummary, CCTVItem, CCTVListResponse } from '../types';
-import { getRiskLevelText } from '../utils/riskUtils';
+import type { DashboardData, OverviewStats, RegionSummary } from '../types';
+// import type { CCTVItem, CCTVListResponse } from '../types'; // 사용하지 않음
+// import { getRiskLevelText } from '../utils/riskUtils'; // 사용하지 않음
 
 export function useDashboardData() {
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
@@ -101,7 +102,7 @@ export function useDashboardData() {
   }, []);
 
   // 구역별 위험도 평균 조회 (한 번의 API 호출로 모든 구역 조회)
-  const fetchRegionsRiskAverage = useCallback(async (regionList: RegionSummary[]) => {
+  const fetchRegionsRiskAverage = useCallback(async (_regionList: RegionSummary[]) => {
     try {
       // 한 번의 API 호출로 모든 구역의 위험도 평균 조회
       const response = await api.get<{ 
@@ -237,8 +238,8 @@ export function useDashboardData() {
         심각: { count: 0, items: [] as string[] },
       };
       
-      let totalCongestion = 0;
-      let congestionCount = 0;
+      // let totalCongestion = 0; // 사용하지 않음
+      // let congestionCount = 0; // 사용하지 않음
       
       allStations.forEach((station) => {
         const key = station.region_id || 'unknown';
@@ -417,7 +418,7 @@ export function useDashboardData() {
     }
     
     let isMounted = true;
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     
     // 위험도 평균 조회 함수 (ref를 통해 최신 regions 참조)
     const fetchRisk = async () => {

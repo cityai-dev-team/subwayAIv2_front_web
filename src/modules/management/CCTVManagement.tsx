@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Typography, Spin, Table, Select, Button, Space, Modal, Form, Input, message } from 'antd';
+import { Card, Typography, Table, Select, Button, Space, Modal, Form, Input, message } from 'antd';
 import { DownloadOutlined, EditOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 
@@ -12,7 +12,8 @@ interface CCTVData {
   cctv_name: string;
   region_id: string;
   region_name: string;
-  last_update_time?: string;
+  space_area?: number | null;
+  last_update_time?: string | null;
   status?: string;
 }
 
@@ -22,7 +23,7 @@ export default function CCTVManagement() {
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [regions, setRegions] = useState<Array<{ region_id: string; region_name: string }>>([]);
   const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingCCTV, setEditingCCTV] = useState<CCTVData | null>(null);
+  const [_editingCCTV, setEditingCCTV] = useState<CCTVData | null>(null);
   const [form] = Form.useForm();
 
   // 구역 목록 가져오기
@@ -46,7 +47,7 @@ export default function CCTVManagement() {
   const fetchCCTVList = useCallback(async () => {
     setLoading(true);
     try {
-      const cctvRes = await api.get<{ status: string; data: Array<{ cctv_uid: number; cctv_id: string; cctv_kr_name: string; region_id: string; region_name: string; last_update_time?: string }> }>('/report/setting/cctvs');
+      const cctvRes = await api.get<{ status: string; data: Array<{ cctv_uid: number; cctv_id: string; cctv_kr_name: string; region_id: string; region_name: string; space_area?: number; last_update_time?: string }> }>('/report/setting/cctvs');
       
       if (!cctvRes.data || !Array.isArray(cctvRes.data)) {
         throw new Error('Invalid API response format');
@@ -65,6 +66,7 @@ export default function CCTVManagement() {
         cctv_name: cctv.cctv_kr_name || cctv.cctv_id || '',
         region_id: cctv.region_id || '',
         region_name: cctv.region_name || cctv.region_id || '',
+        space_area: cctv.space_area || null,
         last_update_time: cctv.last_update_time || null,
         status: '정상', // TODO: 실제 데이터 가져오기
       }));
@@ -98,9 +100,10 @@ export default function CCTVManagement() {
   // 수정 저장
   const handleSave = async () => {
     try {
-      const values = await form.validateFields();
+      await form.validateFields();
       
       // TODO: 실제 API 호출
+      // const values = await form.validateFields();
       // await api.put(`/report/setting/cctv/${editingCCTV?.uid}`, values);
       
       message.success('CCTV 정보가 수정되었습니다.');
@@ -116,14 +119,22 @@ export default function CCTVManagement() {
 
   // CSV 다운로드
   const handleExportCSV = () => {
-    const headers = ['CCTV ID', 'CCTV 명', '구역', '최근 업데이트 시간', '상태'];
-    const rows = cctvList.map(row => [
-      row.cctv_id,
-      row.cctv_name,
-      row.region_name,
-      row.last_update_time || '',
-      row.status || '',
-    ]);
+    const headers = ['CCTV ID', 'CCTV 명', '구역', '면적 (m²)', '최근 업데이트 시간', '상태'];
+    const rows = cctvList.map(row => {
+      let spaceAreaStr = '';
+      if (row.space_area !== null && row.space_area !== undefined) {
+        const numValue = typeof row.space_area === 'number' ? row.space_area : Number(row.space_area);
+        spaceAreaStr = isNaN(numValue) ? '' : numValue.toFixed(2);
+      }
+      return [
+        row.cctv_id,
+        row.cctv_name,
+        row.region_name,
+        spaceAreaStr,
+        row.last_update_time || '',
+        row.status || '',
+      ];
+    });
 
     const csvContent = [
       headers.join(','),
@@ -159,6 +170,18 @@ export default function CCTVManagement() {
       dataIndex: 'region_name',
       key: 'region_name',
       width: 150,
+    },
+    {
+      title: '면적 (m²)',
+      dataIndex: 'space_area',
+      key: 'space_area',
+      width: 120,
+      align: 'right' as const,
+      render: (value: number | null | undefined) => {
+        if (value === null || value === undefined) return '-';
+        const numValue = typeof value === 'number' ? value : Number(value);
+        return isNaN(numValue) ? '-' : numValue.toFixed(2);
+      },
     },
     {
       title: '최근 업데이트 시간',
@@ -239,6 +262,7 @@ export default function CCTVManagement() {
           dataSource={cctvList}
           loading={loading}
           pagination={{ pageSize: 20 }}
+          size="small"
           onRow={(record) => ({
             onClick: () => handleEdit(record),
             style: { cursor: 'pointer' },

@@ -33,7 +33,14 @@ function buildUrl(path: string, params?: Record<string, any>) {
   const url = new URL(`${API_BASE}${API_PREFIX}${p}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
-      if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
+      if (v !== undefined && v !== null) {
+        // 배열인 경우 각 요소를 별도의 파라미터로 추가
+        if (Array.isArray(v)) {
+          v.forEach(item => url.searchParams.append(k, String(item)));
+        } else {
+          url.searchParams.set(k, String(v));
+        }
+      }
     }
   }
   return url.toString();
@@ -43,7 +50,14 @@ function buildUrl(path: string, params?: Record<string, any>) {
     if (params) {
       const searchParams = new URLSearchParams();
       for (const [k, v] of Object.entries(params)) {
-        if (v !== undefined && v !== null) searchParams.set(k, String(v));
+        if (v !== undefined && v !== null) {
+          // 배열인 경우 각 요소를 별도의 파라미터로 추가
+          if (Array.isArray(v)) {
+            v.forEach(item => searchParams.append(k, String(item)));
+          } else {
+            searchParams.set(k, String(v));
+          }
+        }
       }
       const queryString = searchParams.toString();
       return queryString ? `${url}?${queryString}` : url;
@@ -121,7 +135,20 @@ async function blob(path: string, opts: Omit<RequestOpts, 'body'> = {}): Promise
 
   if (!res.ok) {
     let details: any = undefined;
-    try { details = await res.text(); } catch {
+    try {
+      const ct = res.headers.get('content-type') || '';
+      const text = await res.text();
+      // JSON 형식인 경우 파싱 시도
+      if (ct.includes('application/json')) {
+        try {
+          details = JSON.parse(text);
+        } catch {
+          details = text;
+        }
+      } else {
+        details = text;
+      }
+    } catch {
       // 에러 응답 파싱 실패 시 무시
     }
     const err: ApiError = Object.assign(new Error(`HTTP ${res.status} ${res.statusText}`), {

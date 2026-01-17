@@ -1,4 +1,4 @@
-import { Card, Progress, Row, Col, Typography, Space } from 'antd';
+import { Card, Row, Col, Typography } from 'antd';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,7 +11,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import type { RegionSummary } from '../types';
-import { getRiskColor } from '../utils/riskUtils';
+// import { getRiskColor } from '../utils/riskUtils'; // 사용하지 않음
 
 // Chart.js 등록
 ChartJS.register(
@@ -57,7 +57,7 @@ export default function RegionCards({ regions }: RegionCardsProps) {
 
   // Chart.js 데이터 생성 함수
   const getChartData = (distribution: { 심각: number; 경계: number; 주의: number; 관심: number }, total: number) => {
-    const safeTotal = total > 0 ? total : 1;
+    // const safeTotal = total > 0 ? total : 1; // 사용하지 않음
     
     return {
       labels: ['혼잡지속도 분포'],
@@ -136,7 +136,7 @@ export default function RegionCards({ regions }: RegionCardsProps) {
   return (
     <Row gutter={[16, 16]}>
       {displayRegions.map((region) => {
-        const riskColor = getRiskColor(region.risk_level);
+        // const riskColor = getRiskColor(region.risk_level); // 사용하지 않음
         const totalCCTVs = region.risk_distribution.심각 + 
                           region.risk_distribution.경계 + 
                           region.risk_distribution.주의 + 

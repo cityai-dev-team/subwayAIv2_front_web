@@ -227,24 +227,25 @@ export default function MonthlyStatistics() {
         }
         
         // 혼잡도 분포 집계
-        timeGroupedData[time].congestion_level.하 += row.congestion_level_1 || 0;
-        timeGroupedData[time].congestion_level.중 += row.congestion_level_2 || 0;
-        timeGroupedData[time].congestion_level.상 += row.congestion_level_3 || 0;
-        timeGroupedData[time].congestion_level.total += (row.congestion_level_1 || 0) + (row.congestion_level_2 || 0) + (row.congestion_level_3 || 0);
+        const rowAny = row as any;
+        timeGroupedData[time].congestion_level.하 += rowAny.congestion_level_1 || 0;
+        timeGroupedData[time].congestion_level.중 += rowAny.congestion_level_2 || 0;
+        timeGroupedData[time].congestion_level.상 += rowAny.congestion_level_3 || 0;
+        timeGroupedData[time].congestion_level.total += (rowAny.congestion_level_1 || 0) + (rowAny.congestion_level_2 || 0) + (rowAny.congestion_level_3 || 0);
         
         // 혼잡지속도 분포 집계
-        timeGroupedData[time].risk_level.관심 += row.risk_level_1 || 0;
-        timeGroupedData[time].risk_level.주의 += row.risk_level_2 || 0;
-        timeGroupedData[time].risk_level.경계 += row.risk_level_3 || 0;
-        timeGroupedData[time].risk_level.심각 += row.risk_level_4 || 0;
-        timeGroupedData[time].risk_level.total += (row.risk_level_1 || 0) + (row.risk_level_2 || 0) + (row.risk_level_3 || 0) + (row.risk_level_4 || 0);
+        timeGroupedData[time].risk_level.관심 += rowAny.risk_level_1 || 0;
+        timeGroupedData[time].risk_level.주의 += rowAny.risk_level_2 || 0;
+        timeGroupedData[time].risk_level.경계 += rowAny.risk_level_3 || 0;
+        timeGroupedData[time].risk_level.심각 += rowAny.risk_level_4 || 0;
+        timeGroupedData[time].risk_level.total += (rowAny.risk_level_1 || 0) + (rowAny.risk_level_2 || 0) + (rowAny.risk_level_3 || 0) + (rowAny.risk_level_4 || 0);
         
         // 혼잡도(국토부) 분포 집계
-        timeGroupedData[time].congestion_level_molit_dist.보통 += row.congestion_level_molit_1 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.주의 += row.congestion_level_molit_2 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.혼잡 += row.congestion_level_molit_3 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.심각 += row.congestion_level_molit_4 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.total += (row.congestion_level_molit_1 || 0) + (row.congestion_level_molit_2 || 0) + (row.congestion_level_molit_3 || 0) + (row.congestion_level_molit_4 || 0);
+        timeGroupedData[time].congestion_level_molit_dist.보통 += rowAny.congestion_level_molit_1 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.주의 += rowAny.congestion_level_molit_2 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.혼잡 += rowAny.congestion_level_molit_3 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.심각 += rowAny.congestion_level_molit_4 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.total += (rowAny.congestion_level_molit_1 || 0) + (rowAny.congestion_level_molit_2 || 0) + (rowAny.congestion_level_molit_3 || 0) + (rowAny.congestion_level_molit_4 || 0);
       });
       
       // 차트 데이터에 분포 데이터 추가
@@ -678,7 +679,7 @@ export default function MonthlyStatistics() {
       key: 'time',
       width: 160,
       fixed: 'left' as const,
-      align: 'center',
+      align: 'center' as const,
     },
     {
       title: <div style={{ textAlign: 'center' }}>구역명</div>,
@@ -701,7 +702,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_sum',
           key: 'traffic_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -709,7 +710,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_avg',
           key: 'traffic_avg',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -717,7 +718,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_max',
           key: 'traffic_max',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -730,7 +731,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_1',
           key: 'congestion_level_1',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -740,7 +741,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_2',
           key: 'congestion_level_2',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -750,7 +751,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_3',
           key: 'congestion_level_3',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -765,7 +766,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'risk_level_1',
           key: 'risk_level_1',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -775,7 +776,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'risk_level_2',
           key: 'risk_level_2',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -785,7 +786,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'risk_level_3',
           key: 'risk_level_3',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -795,7 +796,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'risk_level_4',
           key: 'risk_level_4',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -810,7 +811,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_molit_1',
           key: 'congestion_level_molit_1',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -820,7 +821,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_molit_2',
           key: 'congestion_level_molit_2',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -830,7 +831,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_molit_3',
           key: 'congestion_level_molit_3',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -840,7 +841,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'congestion_level_molit_4',
           key: 'congestion_level_molit_4',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -852,7 +853,7 @@ export default function MonthlyStatistics() {
       dataIndex: 'data_count',
       key: 'data_count',
       width: 100,
-      align: 'right',
+      align: 'right' as const,
       render: (value: number) => value?.toLocaleString() || '0',
     },
     {
@@ -863,7 +864,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_in_avg',
           key: 'traffic_in_avg',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -871,7 +872,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_in_max',
           key: 'traffic_in_max',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -879,7 +880,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_in_sum',
           key: 'traffic_in_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -892,7 +893,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_out_avg',
           key: 'traffic_out_avg',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -900,7 +901,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_out_max',
           key: 'traffic_out_max',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -908,7 +909,7 @@ export default function MonthlyStatistics() {
           dataIndex: 'traffic_out_sum',
           key: 'traffic_out_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -1070,7 +1071,6 @@ export default function MonthlyStatistics() {
             loading={loading}
             pagination={{ pageSize: 20 }}
             scroll={{ x: 'max-content', y: undefined }}
-            variant="bordered"
             size="middle"
           />
         </div>

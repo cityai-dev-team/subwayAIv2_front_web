@@ -19,7 +19,17 @@ cd "$PROJECT_DIR"
 
 # 환경 변수 파일 경로
 ENV_FILE=".env.dev"
-COMPOSE_FILE="docker-compose.dev.yml"
+
+# Offline 모드 확인 (첫 번째 인자가 "offline"이면 오프라인 모드)
+if [ "$1" = "offline" ]; then
+    COMPOSE_FILE="docker-compose.dev.offline.yml"
+    OFFLINE_MODE=true
+    shift  # "offline" 인자 제거
+else
+    COMPOSE_FILE="docker-compose.dev.yml"
+    OFFLINE_MODE=false
+fi
+
 COMPOSE_CMD="docker compose -f $COMPOSE_FILE"
 
 # 환경 파일 확인
@@ -30,18 +40,11 @@ if [ ! -f "$ENV_FILE" ]; then
     exit 1
 fi
 
-# 환경 변수 로드 (Windows 줄바꿈 문자 제거, 주석 및 빈 줄 제거)
+# 환경 변수 로드 (Windows 줄바꿈 문자 제거)
 set -a
 TMP_ENV=$(mktemp)
-# CRLF 제거, 주석 제거, 빈 줄 제거, export 가능한 형식으로 변환
-sed 's/\r$//' "$ENV_FILE" | \
-    grep -v '^[[:space:]]*#' | \
-    grep -v '^[[:space:]]*$' | \
-    sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | \
-    grep -v '^$' > "$TMP_ENV" || true
-if [ -s "$TMP_ENV" ]; then
-    source "$TMP_ENV"
-fi
+sed 's/\r$//' "$ENV_FILE" > "$TMP_ENV"
+source "$TMP_ENV"
 rm -f "$TMP_ENV"
 set +a
 
@@ -51,6 +54,12 @@ if [ -z "$APP_PORT" ] || [ -z "$NET" ] || [ -z "$C_WEB" ]; then
     echo "  APP_PORT, NET, C_WEB를 확인하세요."
     exit 1
 fi
+
+# 필수 디렉토리 자동 생성
+echo -e "${YELLOW}📁 필수 디렉토리 확인 및 생성 중...${NC}"
+mkdir -p "$PROJECT_DIR/logs"
+chmod 755 "$PROJECT_DIR/logs" 2>/dev/null || true
+echo -e "${GREEN}✅ 디렉토리 준비 완료${NC}"
 
 # 함수 정의
 print_header() {
@@ -62,19 +71,19 @@ print_header() {
 }
 
 print_step() {
-    echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} ${YELLOW}[STEP]${NC} $1"
+    echo -e "${YELLOW}[STEP]${NC} $1"
 }
 
 print_success() {
-    echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} ${GREEN}[OK]${NC} $1"
+    echo -e "${GREEN}[OK]${NC} $1"
 }
 
 print_error() {
-    echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} ${RED}[ERROR]${NC} $1"
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
 print_info() {
-    echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} ${CYAN}[INFO]${NC} $1"
+    echo -e "${CYAN}[INFO]${NC} $1"
 }
 
 check_docker() {
@@ -118,18 +127,18 @@ create_network() {
 
 check_existing_containers() {
     print_step "기존 컨테이너 확인 중..."
-    EXISTING_CONTAINERS=$($COMPOSE_CMD --env-file "$ENV_FILE" ps -q 2>/dev/null || true)
+    EXISTING_CONTAINERS=$($COMPOSE_CMD --env-file "$ENV_FILE" ps -q web 2>/dev/null || true)
     if [ -n "$EXISTING_CONTAINERS" ]; then
-        RUNNING_CONTAINERS=$($COMPOSE_CMD --env-file "$ENV_FILE" ps --filter "status=running" -q 2>/dev/null || true)
+        RUNNING_CONTAINERS=$($COMPOSE_CMD --env-file "$ENV_FILE" ps --filter "status=running" -q web 2>/dev/null || true)
         if [ -n "$RUNNING_CONTAINERS" ]; then
             print_info "실행 중인 컨테이너가 있습니다."
-            $COMPOSE_CMD --env-file "$ENV_FILE" ps
+            $COMPOSE_CMD --env-file "$ENV_FILE" ps web
             echo ""
             read -p "기존 컨테이너를 재시작하시겠습니까? (y/N): " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
                 print_step "컨테이너 재시작 중..."
-                $COMPOSE_CMD --env-file "$ENV_FILE" restart
+                $COMPOSE_CMD --env-file "$ENV_FILE" restart web
                 print_success "컨테이너 재시작 완료"
                 return 0
             else
@@ -141,6 +150,17 @@ check_existing_containers() {
     return 1
 }
 
+build_image() {
+    print_step "Docker 이미지 빌드 중..."
+    IMAGE_NAME_FULL="${IMAGE_NAME:-subwayaiv2-front-web}:dev"
+    if docker build -t "$IMAGE_NAME_FULL" -f Dockerfile .; then
+        print_success "이미지 빌드 완료: ${IMAGE_NAME_FULL}"
+    else
+        print_error "이미지 빌드 실패"
+        exit 1
+    fi
+}
+
 start_services() {
     print_step "개발 환경 서비스 시작 중..."
     
@@ -150,18 +170,26 @@ start_services() {
     fi
     
     print_info "새로운 컨테이너를 시작합니다..."
-    if $COMPOSE_CMD --env-file "$ENV_FILE" up -d --build; then
+    print_info "의존성 설치 중... (처음 시작 시 시간이 걸릴 수 있습니다)"
+    
+    if $COMPOSE_CMD --env-file "$ENV_FILE" up -d web; then
         print_success "서비스 시작 완료"
         
-        # 컨테이너 시작 대기
-        print_step "컨테이너 시작 대기 중... (최대 10초)"
-        for i in {1..10}; do
-            if $COMPOSE_CMD --env-file "$ENV_FILE" ps --filter "status=running" | grep -q "Up"; then
-                print_success "컨테이너가 정상적으로 시작되었습니다."
-                break
+        # 컨테이너 시작 대기 (의존성 설치 시간 고려하여 대기 시간 증가)
+        print_step "컨테이너 시작 및 의존성 설치 대기 중... (최대 60초)"
+        for i in {1..60}; do
+            CONTAINER_STATUS=$($COMPOSE_CMD --env-file "$ENV_FILE" ps --format json 2>/dev/null | grep -o '"State":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+            if [ "$CONTAINER_STATUS" = "running" ]; then
+                # vite가 설치되었는지 확인
+                if $COMPOSE_CMD --env-file "$ENV_FILE" exec -T web sh -c "test -f node_modules/.bin/vite" 2>/dev/null; then
+                    print_success "컨테이너가 정상적으로 시작되었습니다."
+                    break
+                fi
             fi
             sleep 1
-            echo -n "."
+            if [ $((i % 5)) -eq 0 ]; then
+                echo -n "."
+            fi
         done
         echo ""
     else
@@ -173,10 +201,14 @@ start_services() {
 show_status() {
     print_header "서비스 상태"
     
-    # 컨테이너 상태 표시
-    $COMPOSE_CMD --env-file "$ENV_FILE" ps
+    $COMPOSE_CMD --env-file "$ENV_FILE" ps web
     
     echo ""
+    print_header "서비스 정보"
+    echo -e "${GREEN}  [1] 웹 서비스:${NC}    ${C_WEB}"
+    echo -e "${GREEN}  [2] 포트:${NC}          ${APP_PORT}"
+    echo ""
+    
     print_header "접속 정보"
     echo -e "${GREEN}  [1] 웹 애플리케이션:${NC}  http://localhost:$APP_PORT"
     echo ""
@@ -184,7 +216,7 @@ show_status() {
     # 헬스 체크 시도
     print_step "서비스 응답 확인 중..."
     sleep 2
-    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$APP_PORT" 2>/dev/null || echo "000")
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 "http://localhost:$APP_PORT" 2>/dev/null || echo "000")
     if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "304" ]; then
         print_success "서비스가 정상적으로 실행 중입니다. (HTTP $HTTP_CODE)"
     elif [ "$HTTP_CODE" = "000" ]; then
@@ -198,21 +230,116 @@ show_status() {
 }
 
 show_logs() {
+    local service="$1"
     print_header "서비스 로그"
     echo -e "${YELLOW}로그를 확인합니다. (Ctrl+C로 종료)${NC}"
     echo ""
-    $COMPOSE_CMD --env-file "$ENV_FILE" logs -f --tail=200 web
+    if [ -z "$service" ]; then
+        $COMPOSE_CMD --env-file "$ENV_FILE" logs -f --tail=200 web
+    else
+        $COMPOSE_CMD --env-file "$ENV_FILE" logs -f --tail=200 "$service"
+    fi
 }
 
 show_menu() {
     print_header "사용 가능한 명령어"
     echo -e "${CYAN}  start${NC}     - 서비스 시작 (기본 동작)"
+    echo -e "${CYAN}  offline start${NC} - 오프라인 모드로 서비스 시작"
     echo -e "${CYAN}  stop${NC}      - 서비스 중지"
     echo -e "${CYAN}  restart${NC}   - 서비스 재시작"
     echo -e "${CYAN}  status${NC}    - 서비스 상태 확인"
-    echo -e "${CYAN}  logs${NC}     - 서비스 로그 확인"
-    echo -e "${CYAN}  down${NC}     - 서비스 중지 및 컨테이너 제거"
+    echo -e "${CYAN}  logs${NC}      - 서비스 로그 확인"
+    echo -e "${CYAN}  down${NC}      - 서비스 중지 및 컨테이너 제거"
     echo ""
+}
+
+rebuild_services() {
+    print_step "기존 서비스 중지 및 컨테이너 제거 중..."
+    # 모든 서비스 중지
+    $COMPOSE_CMD --env-file "$ENV_FILE" stop 2>/dev/null || true
+    # 모든 서비스 제거 (볼륨 제외, 이미지도 삭제)
+    $COMPOSE_CMD --env-file "$ENV_FILE" down --remove-orphans --rmi local 2>/dev/null || true
+    # 개별 컨테이너도 명시적으로 제거
+    docker rm -f "${C_WEB}" 2>/dev/null || true
+    # 이미지도 삭제
+    IMAGE_NAME_FULL="${IMAGE_NAME:-subwayaiv2-front-web}:dev"
+    docker rmi "${IMAGE_NAME_FULL}" 2>/dev/null || true
+    print_success "기존 서비스 제거 완료"
+    
+    print_step "서비스 시작 중..."
+    if $COMPOSE_CMD --env-file "$ENV_FILE" up -d web; then
+        print_success "서비스 시작 완료"
+        sleep 2
+        show_status
+    else
+        print_error "서비스 시작 실패"
+        exit 1
+    fi
+}
+
+rebuild_services_offline() {
+    # 오프라인 모드용 compose 파일 사용
+    local OFFLINE_COMPOSE_FILE="docker-compose.dev.offline.yml"
+    local OFFLINE_COMPOSE_CMD="docker compose -f $OFFLINE_COMPOSE_FILE"
+    
+    print_step "기존 서비스 중지 및 컨테이너 제거 중..."
+    # 모든 서비스 중지 (온라인/오프라인 모두)
+    $COMPOSE_CMD --env-file "$ENV_FILE" stop 2>/dev/null || true
+    $OFFLINE_COMPOSE_CMD --env-file "$ENV_FILE" stop 2>/dev/null || true
+    # 모든 서비스 제거 (볼륨 제외, 이미지도 삭제)
+    $COMPOSE_CMD --env-file "$ENV_FILE" down --remove-orphans --rmi local 2>/dev/null || true
+    $OFFLINE_COMPOSE_CMD --env-file "$ENV_FILE" down --remove-orphans --rmi local 2>/dev/null || true
+    # 개별 컨테이너도 명시적으로 제거
+    docker rm -f "${C_WEB}" 2>/dev/null || true
+    # 이미지도 삭제
+    IMAGE_NAME_FULL="${IMAGE_NAME:-subwayaiv2-front-web}:dev"
+    docker rmi "${IMAGE_NAME_FULL}" 2>/dev/null || true
+    print_success "기존 서비스 제거 완료"
+    
+    print_step "서비스 시작 중 (오프라인 모드)..."
+    if $OFFLINE_COMPOSE_CMD --env-file "$ENV_FILE" up -d web; then
+        print_success "서비스 시작 완료"
+        sleep 2
+        # 상태 확인은 오프라인 compose 파일 사용
+        $OFFLINE_COMPOSE_CMD --env-file "$ENV_FILE" ps web
+    else
+        print_error "서비스 시작 실패"
+        exit 1
+    fi
+}
+
+show_rebuild_menu() {
+    while true; do
+        echo ""
+        print_header "서비스 재빌드 메뉴"
+        echo -e "${BOLD}재빌드 모드를 선택하세요:${NC}"
+        echo "  [1] 온라인 모드로 재빌드 (기존 컨테이너 제거 → 시작)"
+        echo "  [2] 오프라인 모드로 재빌드 (기존 컨테이너 제거 → 시작)"
+        echo "  [0] 이전 메뉴로 돌아가기"
+        echo ""
+        read -p "선택 (0-2): " rebuild_choice
+        
+        case $rebuild_choice in
+            1)
+                check_docker
+                create_network
+                rebuild_services
+                break
+                ;;
+            2)
+                check_docker
+                create_network
+                rebuild_services_offline
+                break
+                ;;
+            0)
+                break
+                ;;
+            *)
+                print_error "잘못된 선택입니다."
+                ;;
+        esac
+    done
 }
 
 interactive_menu() {
@@ -224,8 +351,8 @@ interactive_menu() {
         echo "  [2] 서비스 중지"
         echo "  [3] 서비스 재시작"
         echo "  [4] 서비스 상태 확인"
-        echo "  [5] 로그 확인"
-        echo "  [6] 서비스 중지 및 컨테이너 제거"
+        echo "  [5] 서비스 재빌드"
+        echo "  [6] 로그 확인"
         echo "  [7] 도움말"
         echo "  [0] 종료"
         echo ""
@@ -233,17 +360,19 @@ interactive_menu() {
         
         case $choice in
             1)
+                check_docker
+                create_network
                 start_services
                 show_status
                 ;;
             2)
                 print_step "서비스 중지 중..."
-                $COMPOSE_CMD --env-file "$ENV_FILE" stop
+                $COMPOSE_CMD --env-file "$ENV_FILE" stop web
                 print_success "서비스 중지 완료"
                 ;;
             3)
                 print_step "서비스 재시작 중..."
-                $COMPOSE_CMD --env-file "$ENV_FILE" restart
+                $COMPOSE_CMD --env-file "$ENV_FILE" restart web
                 print_success "서비스 재시작 완료"
                 sleep 2
                 show_status
@@ -252,12 +381,10 @@ interactive_menu() {
                 show_status
                 ;;
             5)
-                show_logs
+                show_rebuild_menu
                 ;;
             6)
-                print_step "서비스 중지 및 컨테이너 제거 중..."
-                $COMPOSE_CMD --env-file "$ENV_FILE" down
-                print_success "서비스 중지 및 컨테이너 제거 완료"
+                show_logs
                 ;;
             7)
                 show_menu
@@ -275,10 +402,18 @@ interactive_menu() {
 
 # 메인 실행
 main() {
-    print_header "개발 환경 실행 스크립트"
+    if [ "$OFFLINE_MODE" = "true" ]; then
+        print_header "개발 환경 실행 스크립트 (오프라인 모드)"
+    else
+        print_header "개발 환경 실행 스크립트"
+    fi
     
     # 환경 정보 표시
     print_info "환경 파일: ${ENV_FILE}"
+    print_info "Compose 파일: ${COMPOSE_FILE}"
+    if [ "$OFFLINE_MODE" = "true" ]; then
+        print_info "모드: ${YELLOW}오프라인${NC}"
+    fi
     print_info "프로젝트: ${PROJECT}"
     print_info "네트워크: ${NET}"
     print_info "컨테이너: ${C_WEB}"
@@ -306,15 +441,22 @@ main() {
             echo -e "${CYAN}  [3] 대화형 메뉴:${NC}   ./scripts/run-dev.sh menu"
             echo ""
             ;;
+        build)
+            check_docker
+            create_network
+            build_image
+            start_services
+            show_status
+            ;;
         stop)
             print_step "서비스 중지 중..."
-            $COMPOSE_CMD --env-file "$ENV_FILE" stop
+            $COMPOSE_CMD --env-file "$ENV_FILE" stop web
             print_success "서비스 중지 완료"
             ;;
         restart)
             check_docker
             print_step "서비스 재시작 중..."
-            $COMPOSE_CMD --env-file "$ENV_FILE" restart
+            $COMPOSE_CMD --env-file "$ENV_FILE" restart web
             print_success "서비스 재시작 완료"
             sleep 2
             show_status
@@ -329,8 +471,12 @@ main() {
             ;;
         down)
             print_step "서비스 중지 및 컨테이너 제거 중..."
-            $COMPOSE_CMD --env-file "$ENV_FILE" down
-            print_success "서비스 중지 및 컨테이너 제거 완료"
+            $COMPOSE_CMD --env-file "$ENV_FILE" stop web 2>/dev/null || true
+            $COMPOSE_CMD --env-file "$ENV_FILE" rm -f web 2>/dev/null || true
+            docker rm -f "${C_WEB}" 2>/dev/null || true
+            IMAGE_NAME_FULL="${IMAGE_NAME:-subwayaiv2-front-web}:dev"
+            docker rmi "${IMAGE_NAME_FULL}" 2>/dev/null || true
+            print_success "서비스 중지 및 컨테이너/이미지 제거 완료"
             ;;
         menu|interactive)
             check_docker
@@ -350,4 +496,3 @@ main() {
 
 # 스크립트 실행
 main "$@"
-

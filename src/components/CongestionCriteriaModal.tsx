@@ -1,4 +1,4 @@
-import { useState } from 'react';
+// import { useState } from 'react'; // 사용하지 않음
 import { Modal, Tabs, Table, Typography } from 'antd';
 import { InfoCircleOutlined } from '@ant-design/icons';
 
@@ -74,7 +74,7 @@ export default function CongestionCriteriaModal({ open, onClose }: CongestionCri
       key: 'level',
       width: 150,
       align: 'center' as const,
-      render: (text: string, record: any) => {
+      render: (text: string, _record: any) => {
         const colorMap: { [key: string]: string } = {
           '보통': '#52c41a',
           '주의': '#faad14',
@@ -127,7 +127,7 @@ export default function CongestionCriteriaModal({ open, onClose }: CongestionCri
       key: 'level',
       width: 150,
       align: 'center' as const,
-      render: (text: string, record: any) => {
+      render: (text: string, _record: any) => {
         const colorMap: { [key: string]: string } = {
           '관심': '#52c41a',
           '주의': '#faad14',

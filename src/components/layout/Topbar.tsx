@@ -17,13 +17,16 @@ export default function Topbar({
   return (
     <>
       <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="h-14 w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          {/* 왼쪽: 로고 아이콘 */}
+        <div className="h-14 w-full px-4 sm:px-6 lg:px-8 flex items-center justify-between relative">
+          {/* 왼쪽: 빈 공간 (레이아웃 균형) */}
+          <div style={{ width: '120px' }}></div>
+          
+          {/* 가운데: 로고와 혼잡도 리포팅 타이틀 */}
           <button
             onClick={onLogoClick}
             title="Go Home"
             aria-label="Go Home"
-            className="inline-flex items-center gap-3 select-none hover:opacity-90 transition-opacity whitespace-nowrap"
+            className="absolute left-1/2 transform -translate-x-1/2 inline-flex items-center gap-3 select-none hover:opacity-90 transition-opacity whitespace-nowrap"
           >
             <img 
               src="/icon/logo.svg" 

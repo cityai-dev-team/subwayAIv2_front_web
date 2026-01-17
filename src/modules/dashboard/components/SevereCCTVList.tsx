@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Card, Row, Col, Typography, Spin } from 'antd';
+import { Card, Row, Col, Typography } from 'antd';
 import { WarningOutlined } from '@ant-design/icons';
 import { api } from '../../../lib/api';
 import { getRiskColor } from '../utils/riskUtils';
@@ -15,7 +15,7 @@ interface SevereCCTV {
 }
 
 export default function SevereCCTVList() {
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [severeCCTVs, setSevereCCTVs] = useState<SevereCCTV[]>([]);
 
   useEffect(() => {

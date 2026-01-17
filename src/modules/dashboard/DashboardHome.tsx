@@ -49,14 +49,9 @@ export default function DashboardHome() {
     <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
       {/* 헤더 */}
       <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
-        {/* 왼쪽: 타이틀과 설명 */}
+        {/* 왼쪽: 타이틀 */}
         <div style={{ flex: 1 }}>
-          <Space direction="vertical" size="small">
-            <Title level={2} style={{ margin: 0 }}>종합 모니터링</Title>
-            <Text type="secondary">
-              실시간 혼잡도를 종합적으로 나타낸 상황 대시보드
-            </Text>
-          </Space>
+          <Title level={2} style={{ margin: 0 }}>종합 모니터링</Title>
         </div>
         
         {/* 오른쪽: 마지막 업데이트 */}

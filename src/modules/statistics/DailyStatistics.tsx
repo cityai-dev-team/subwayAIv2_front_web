@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Card, Typography, Spin, Table, DatePicker, Select, Button, Space, Tabs } from 'antd';
-import { DownloadOutlined } from '@ant-design/icons';
+import { Card, Typography, Spin, Table, DatePicker, Select, Button, Space, Tabs, Modal } from 'antd';
+import { DownloadOutlined, EyeOutlined } from '@ant-design/icons';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -113,6 +113,12 @@ export default function DailyStatistics() {
   const [regions, setRegions] = useState<Array<{ region_id: string; region_name: string }>>([]);
   const [allCCTVs, setAllCCTVs] = useState<Array<{ cctv_uid: number; cctv_id: string; cctv_name: string; region_id: string }>>([]);
   const [cctvs, setCCTVs] = useState<Array<{ cctv_uid: number; cctv_id: string; cctv_name: string }>>([]);
+  const [graphDetailModalOpen, setGraphDetailModalOpen] = useState<boolean>(false);
+  // 상세보기 모달 내부 상태
+  const [detailChartTypeTab, setDetailChartTypeTab] = useState<string>('traffic');
+  const [detailChartData, setDetailChartData] = useState<ChartData[]>([]);
+  const [detailTableData, setDetailTableData] = useState<TableData[]>([]);
+  const [detailLoading, setDetailLoading] = useState<boolean>(false);
 
   // 구역 및 CCTV 목록 가져오기
   useEffect(() => {
@@ -225,24 +231,25 @@ export default function DailyStatistics() {
         }
         
         // 혼잡도 분포 집계
-        timeGroupedData[time].congestion_level.하 += row.congestion_level_1 || 0;
-        timeGroupedData[time].congestion_level.중 += row.congestion_level_2 || 0;
-        timeGroupedData[time].congestion_level.상 += row.congestion_level_3 || 0;
-        timeGroupedData[time].congestion_level.total += (row.congestion_level_1 || 0) + (row.congestion_level_2 || 0) + (row.congestion_level_3 || 0);
+        const rowAny = row as any;
+        timeGroupedData[time].congestion_level.하 += rowAny.congestion_level_1 || 0;
+        timeGroupedData[time].congestion_level.중 += rowAny.congestion_level_2 || 0;
+        timeGroupedData[time].congestion_level.상 += rowAny.congestion_level_3 || 0;
+        timeGroupedData[time].congestion_level.total += (rowAny.congestion_level_1 || 0) + (rowAny.congestion_level_2 || 0) + (rowAny.congestion_level_3 || 0);
         
         // 혼잡지속도 분포 집계
-        timeGroupedData[time].risk_level.관심 += row.risk_level_1 || 0;
-        timeGroupedData[time].risk_level.주의 += row.risk_level_2 || 0;
-        timeGroupedData[time].risk_level.경계 += row.risk_level_3 || 0;
-        timeGroupedData[time].risk_level.심각 += row.risk_level_4 || 0;
-        timeGroupedData[time].risk_level.total += (row.risk_level_1 || 0) + (row.risk_level_2 || 0) + (row.risk_level_3 || 0) + (row.risk_level_4 || 0);
+        timeGroupedData[time].risk_level.관심 += rowAny.risk_level_1 || 0;
+        timeGroupedData[time].risk_level.주의 += rowAny.risk_level_2 || 0;
+        timeGroupedData[time].risk_level.경계 += rowAny.risk_level_3 || 0;
+        timeGroupedData[time].risk_level.심각 += rowAny.risk_level_4 || 0;
+        timeGroupedData[time].risk_level.total += (rowAny.risk_level_1 || 0) + (rowAny.risk_level_2 || 0) + (rowAny.risk_level_3 || 0) + (rowAny.risk_level_4 || 0);
         
         // 혼잡도(국토부) 분포 집계
-        timeGroupedData[time].congestion_level_molit_dist.보통 += row.congestion_level_molit_1 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.주의 += row.congestion_level_molit_2 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.혼잡 += row.congestion_level_molit_3 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.심각 += row.congestion_level_molit_4 || 0;
-        timeGroupedData[time].congestion_level_molit_dist.total += (row.congestion_level_molit_1 || 0) + (row.congestion_level_molit_2 || 0) + (row.congestion_level_molit_3 || 0) + (row.congestion_level_molit_4 || 0);
+        timeGroupedData[time].congestion_level_molit_dist.보통 += rowAny.congestion_level_molit_1 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.주의 += rowAny.congestion_level_molit_2 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.혼잡 += rowAny.congestion_level_molit_3 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.심각 += rowAny.congestion_level_molit_4 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.total += (rowAny.congestion_level_molit_1 || 0) + (rowAny.congestion_level_molit_2 || 0) + (rowAny.congestion_level_molit_3 || 0) + (rowAny.congestion_level_molit_4 || 0);
       });
       
       // 차트 데이터에 분포 데이터 추가
@@ -302,9 +309,10 @@ export default function DailyStatistics() {
   }, [fetchData]);
 
   // Chart.js 옵션 생성 함수
-  const getChartOptions = (type: string) => {
+  const getChartOptions = (type: string, isRegionChart: boolean = false) => {
     const isTraffic = type === 'traffic';
     const isDistribution = ['congestion_level', 'risk_level', 'congestion_level_molit_dist'].includes(type);
+    const isCongestionRatio = ['congestion_ratio', 'congestion_ratio_molit'].includes(type);
     
     return {
       responsive: true,
@@ -334,7 +342,7 @@ export default function DailyStatistics() {
       scales: {
         y: {
           beginAtZero: true,
-          max: isDistribution ? 100 : undefined,
+          max: (isDistribution || isCongestionRatio) ? 100 : (isTraffic && isRegionChart ? 500000 : undefined),
           title: {
             display: true,
             text: isTraffic ? 'Traffic (명)' : isDistribution ? '비율 (%)' : '혼잡도 (%)'
@@ -352,14 +360,168 @@ export default function DailyStatistics() {
     };
   };
 
+  // 상세보기 모달 전용 데이터 가져오기 함수 (부모창 조건 사용)
+  const fetchDetailData = useCallback(async () => {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
+      return;
+    }
+    
+    setDetailLoading(true);
+    try {
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
+      
+      // 전체 데이터 조회 (구역, CCTV 조건 없이)
+      const params: any = {
+        start_date: startDate,
+        end_date: endDate,
+      };
+      
+      const response = await api.get<{
+        chart_data: ChartData[];
+        table_data: Array<{
+          time: string;
+          region_name: string;
+          cctv_name: string;
+          congestion_ratio: number;
+          risk_level: string;
+          traffic_in_avg: number;
+          traffic_in_max: number;
+          traffic_in_sum: number;
+          traffic_out_avg: number;
+          traffic_out_max: number;
+          traffic_out_sum: number;
+          traffic_avg: number;
+          traffic_max: number;
+          traffic_sum: number;
+        }>;
+      }>('/report/getDailyStatistics', { params });
+      
+      // 차트 데이터 설정
+      const chartDataWithKeys = response.chart_data.map((item, index) => ({
+        ...item,
+        key: `detail-chart-${index}`,
+      }));
+      
+      // 테이블 데이터에서 분포 데이터 집계하여 차트 데이터에 추가
+      const timeGroupedData: { [time: string]: any } = {};
+      response.table_data.forEach(row => {
+        const time = row.time;
+        if (!timeGroupedData[time]) {
+          timeGroupedData[time] = {
+            congestion_level: { 하: 0, 중: 0, 상: 0, total: 0 },
+            risk_level: { 관심: 0, 주의: 0, 경계: 0, 심각: 0, total: 0 },
+            congestion_level_molit_dist: { 보통: 0, 주의: 0, 혼잡: 0, 심각: 0, total: 0 },
+          };
+        }
+        
+        const rowAny = row as any;
+        timeGroupedData[time].congestion_level.하 += rowAny.congestion_level_1 || 0;
+        timeGroupedData[time].congestion_level.중 += rowAny.congestion_level_2 || 0;
+        timeGroupedData[time].congestion_level.상 += rowAny.congestion_level_3 || 0;
+        timeGroupedData[time].congestion_level.total += (rowAny.congestion_level_1 || 0) + (rowAny.congestion_level_2 || 0) + (rowAny.congestion_level_3 || 0);
+        
+        timeGroupedData[time].risk_level.관심 += rowAny.risk_level_1 || 0;
+        timeGroupedData[time].risk_level.주의 += rowAny.risk_level_2 || 0;
+        timeGroupedData[time].risk_level.경계 += rowAny.risk_level_3 || 0;
+        timeGroupedData[time].risk_level.심각 += rowAny.risk_level_4 || 0;
+        timeGroupedData[time].risk_level.total += (rowAny.risk_level_1 || 0) + (rowAny.risk_level_2 || 0) + (rowAny.risk_level_3 || 0) + (rowAny.risk_level_4 || 0);
+        
+        timeGroupedData[time].congestion_level_molit_dist.보통 += rowAny.congestion_level_molit_1 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.주의 += rowAny.congestion_level_molit_2 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.혼잡 += rowAny.congestion_level_molit_3 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.심각 += rowAny.congestion_level_molit_4 || 0;
+        timeGroupedData[time].congestion_level_molit_dist.total += (rowAny.congestion_level_molit_1 || 0) + (rowAny.congestion_level_molit_2 || 0) + (rowAny.congestion_level_molit_3 || 0) + (rowAny.congestion_level_molit_4 || 0);
+      });
+      
+      chartDataWithKeys.forEach(item => {
+        const time = item.time;
+        if (timeGroupedData[time]) {
+          const data = timeGroupedData[time];
+          
+          item.congestion_level = {
+            하: data.congestion_level.total > 0 ? (data.congestion_level.하 / data.congestion_level.total) * 100 : 0,
+            중: data.congestion_level.total > 0 ? (data.congestion_level.중 / data.congestion_level.total) * 100 : 0,
+            상: data.congestion_level.total > 0 ? (data.congestion_level.상 / data.congestion_level.total) * 100 : 0,
+          };
+          
+          item.risk_level = {
+            관심: data.risk_level.total > 0 ? (data.risk_level.관심 / data.risk_level.total) * 100 : 0,
+            주의: data.risk_level.total > 0 ? (data.risk_level.주의 / data.risk_level.total) * 100 : 0,
+            경계: data.risk_level.total > 0 ? (data.risk_level.경계 / data.risk_level.total) * 100 : 0,
+            심각: data.risk_level.total > 0 ? (data.risk_level.심각 / data.risk_level.total) * 100 : 0,
+          };
+          
+          item.congestion_level_molit_dist = {
+            보통: data.congestion_level_molit_dist.total > 0 ? (data.congestion_level_molit_dist.보통 / data.congestion_level_molit_dist.total) * 100 : 0,
+            주의: data.congestion_level_molit_dist.total > 0 ? (data.congestion_level_molit_dist.주의 / data.congestion_level_molit_dist.total) * 100 : 0,
+            혼잡: data.congestion_level_molit_dist.total > 0 ? (data.congestion_level_molit_dist.혼잡 / data.congestion_level_molit_dist.total) * 100 : 0,
+            심각: data.congestion_level_molit_dist.total > 0 ? (data.congestion_level_molit_dist.심각 / data.congestion_level_molit_dist.total) * 100 : 0,
+          };
+        } else {
+          item.congestion_level = { 하: 0, 중: 0, 상: 0 };
+          item.risk_level = { 관심: 0, 주의: 0, 경계: 0, 심각: 0 };
+          item.congestion_level_molit_dist = { 보통: 0, 주의: 0, 혼잡: 0, 심각: 0 };
+        }
+      });
+      
+      setDetailChartData(chartDataWithKeys);
+      
+      const cctvCountMap: { [key: string]: number } = {};
+      response.table_data.forEach(row => {
+        const key = `${row.time}_${row.region_name}`;
+        if (row.cctv_name && row.cctv_name !== '-' && row.cctv_name !== '전체') {
+          if (!cctvCountMap[key]) {
+            cctvCountMap[key] = 0;
+          }
+          cctvCountMap[key] += 1;
+        }
+      });
+      
+      const tableDataWithKeys = response.table_data.map((item, index) => {
+        const key = `${item.time}_${item.region_name}`;
+        const cctvCount = cctvCountMap[key] || 0;
+        
+        let cctvDisplay = item.cctv_name;
+        if (item.cctv_name === '-' || item.cctv_name === '전체' || !item.cctv_name) {
+          cctvDisplay = cctvCount > 0 ? `${cctvCount}개` : '-';
+        }
+        
+        return {
+          ...item,
+          key: `detail-table-${index}`,
+          cctv_name: cctvDisplay,
+          cctv_count: cctvCount,
+        };
+      });
+      setDetailTableData(tableDataWithKeys);
+    } catch (error) {
+      console.error('Failed to fetch detail statistics:', error);
+      setDetailChartData([]);
+      setDetailTableData([]);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, [dateRange]);
+
+  // 상세보기 모달 조건 변경 시 데이터 가져오기 (부모창 조건 사용)
+  useEffect(() => {
+    if (graphDetailModalOpen && dateRange && dateRange[0] && dateRange[1]) {
+      fetchDetailData();
+    }
+  }, [graphDetailModalOpen, dateRange, fetchDetailData]);
+
   // Chart.js 데이터 생성
-  const getChartData = (type: string) => {
-    if (chartData.length === 0) {
+  const getChartData = (type: string, regionId?: string, customChartData?: ChartData[], customTableData?: TableData[]) => {
+    const dataChartData = customChartData || chartData;
+    const dataTableData = customTableData || tableData;
+    
+    if (dataChartData.length === 0) {
       return { labels: [], datasets: [] };
     }
     
     // 날짜 라벨 추출
-    const labels = chartData.map(d => {
+    const labels = dataChartData.map(d => {
       const timeStr = d.time as string;
       // "YYYY-MM-DD" 형식에서 날짜만 추출
       return timeStr.split(' ')[0] || timeStr;
@@ -369,9 +531,124 @@ export default function DailyStatistics() {
     const isTraffic = type === 'traffic';
     const isDistribution = ['congestion_level', 'risk_level', 'congestion_level_molit_dist'].includes(type);
     
+    // regionId가 지정된 경우 해당 구역 데이터만 필터링
+    let filteredChartData = dataChartData;
+    if (regionId && regionId !== 'all') {
+      // 테이블 데이터에서 해당 구역의 데이터만 필터링하여 날짜별 집계
+      const regionTableData = dataTableData.filter(row => {
+        const selectedRegionData = regions.find(r => r.region_id === regionId);
+        return selectedRegionData && row.region_name === selectedRegionData.region_name;
+      });
+      
+      // 날짜별로 그룹화하여 집계
+      const dateGrouped: { [date: string]: any } = {};
+      regionTableData.forEach(row => {
+        const date = row.time.split(' ')[0] || row.time;
+        if (!dateGrouped[date]) {
+          dateGrouped[date] = {
+            traffic: { 전체: 0 },
+            congestion_ratio: { 전체: 0 },
+            congestion_ratio_molit: { 전체: 0 },
+            congestion_level: { 하: 0, 중: 0, 상: 0 },
+            risk_level: { 관심: 0, 주의: 0, 경계: 0, 심각: 0 },
+            congestion_level_molit_dist: { 보통: 0, 주의: 0, 혼잡: 0, 심각: 0 },
+            count: 0,
+          };
+        }
+        
+        const rowAny = row as any;
+        if (type === 'traffic') {
+          dateGrouped[date].traffic.전체 += row.traffic_sum || 0;
+        } else if (type === 'congestion_ratio') {
+          dateGrouped[date].congestion_ratio.전체 += row.congestion_ratio || 0;
+          dateGrouped[date].count += 1;
+        } else if (type === 'congestion_ratio_molit') {
+          dateGrouped[date].congestion_ratio_molit.전체 += rowAny.congestion_ratio_molit || 0;
+          dateGrouped[date].count += 1;
+        } else if (type === 'congestion_level') {
+          dateGrouped[date].congestion_level.하 += rowAny.congestion_level_1 || 0;
+          dateGrouped[date].congestion_level.중 += rowAny.congestion_level_2 || 0;
+          dateGrouped[date].congestion_level.상 += rowAny.congestion_level_3 || 0;
+        } else if (type === 'risk_level') {
+          dateGrouped[date].risk_level.관심 += rowAny.risk_level_1 || 0;
+          dateGrouped[date].risk_level.주의 += rowAny.risk_level_2 || 0;
+          dateGrouped[date].risk_level.경계 += rowAny.risk_level_3 || 0;
+          dateGrouped[date].risk_level.심각 += rowAny.risk_level_4 || 0;
+        } else if (type === 'congestion_level_molit_dist') {
+          dateGrouped[date].congestion_level_molit_dist.보통 += rowAny.congestion_level_molit_1 || 0;
+          dateGrouped[date].congestion_level_molit_dist.주의 += rowAny.congestion_level_molit_2 || 0;
+          dateGrouped[date].congestion_level_molit_dist.혼잡 += rowAny.congestion_level_molit_3 || 0;
+          dateGrouped[date].congestion_level_molit_dist.심각 += rowAny.congestion_level_molit_4 || 0;
+        }
+      });
+      
+      // 필터링된 차트 데이터 생성
+      filteredChartData = labels.map(date => {
+        const grouped = dateGrouped[date] || {
+          traffic: { 전체: 0 },
+          congestion_ratio: { 전체: 0 },
+          congestion_ratio_molit: { 전체: 0 },
+          congestion_level: { 하: 0, 중: 0, 상: 0 },
+          risk_level: { 관심: 0, 주의: 0, 경계: 0, 심각: 0 },
+          congestion_level_molit_dist: { 보통: 0, 주의: 0, 혼잡: 0, 심각: 0 },
+          count: 0,
+        };
+        
+        const baseItem = dataChartData.find(d => {
+          const timeStr = d.time as string;
+          const itemDate = timeStr.split(' ')[0] || timeStr;
+          return itemDate === date;
+        }) || { time: date };
+        
+        if (type === 'congestion_ratio' && grouped.count > 0) {
+          grouped.congestion_ratio.전체 = grouped.congestion_ratio.전체 / grouped.count;
+        }
+        if (type === 'congestion_ratio_molit' && grouped.count > 0) {
+          grouped.congestion_ratio_molit.전체 = grouped.congestion_ratio_molit.전체 / grouped.count;
+        }
+        
+        // 분포 차트의 경우 건수를 비율로 변환
+        if (type === 'congestion_level') {
+          const total = grouped.congestion_level.하 + grouped.congestion_level.중 + grouped.congestion_level.상;
+          if (total > 0) {
+            grouped.congestion_level.하 = (grouped.congestion_level.하 / total) * 100;
+            grouped.congestion_level.중 = (grouped.congestion_level.중 / total) * 100;
+            grouped.congestion_level.상 = (grouped.congestion_level.상 / total) * 100;
+          }
+        } else if (type === 'risk_level') {
+          const total = grouped.risk_level.관심 + grouped.risk_level.주의 + grouped.risk_level.경계 + grouped.risk_level.심각;
+          if (total > 0) {
+            grouped.risk_level.관심 = (grouped.risk_level.관심 / total) * 100;
+            grouped.risk_level.주의 = (grouped.risk_level.주의 / total) * 100;
+            grouped.risk_level.경계 = (grouped.risk_level.경계 / total) * 100;
+            grouped.risk_level.심각 = (grouped.risk_level.심각 / total) * 100;
+          }
+        } else if (type === 'congestion_level_molit_dist') {
+          const total = grouped.congestion_level_molit_dist.보통 + grouped.congestion_level_molit_dist.주의 + grouped.congestion_level_molit_dist.혼잡 + grouped.congestion_level_molit_dist.심각;
+          if (total > 0) {
+            grouped.congestion_level_molit_dist.보통 = (grouped.congestion_level_molit_dist.보통 / total) * 100;
+            grouped.congestion_level_molit_dist.주의 = (grouped.congestion_level_molit_dist.주의 / total) * 100;
+            grouped.congestion_level_molit_dist.혼잡 = (grouped.congestion_level_molit_dist.혼잡 / total) * 100;
+            grouped.congestion_level_molit_dist.심각 = (grouped.congestion_level_molit_dist.심각 / total) * 100;
+          }
+        }
+        
+        return {
+          ...baseItem,
+          time: date,
+          traffic: grouped.traffic,
+          congestion_ratio: grouped.congestion_ratio,
+          congestion_ratio_molit: grouped.congestion_ratio_molit,
+          congestion_level: grouped.congestion_level,
+          risk_level: grouped.risk_level,
+          congestion_level_molit_dist: grouped.congestion_level_molit_dist,
+        } as ChartData;
+      });
+    }
+    
     // 분포 차트인 경우
     if (isDistribution) {
-      const distributionData = chartData.map(d => d[type as keyof ChartData] as any);
+      const distributionData = filteredChartData.map(d => d[type as keyof ChartData] as any);
       
       if (type === 'congestion_level') {
         // 혼잡도 분포: 하, 중, 상
@@ -481,7 +758,7 @@ export default function DailyStatistics() {
       }
     } else {
       // 기존 차트 (Traffic, 혼잡비율, 혼잡비율(국토부))
-      const metricData = chartData.map(d => d[type as keyof ChartData] as any);
+      const metricData = filteredChartData.map(d => d[type as keyof ChartData] as any);
       const isRatio = type === 'congestion_ratio' || type === 'congestion_ratio_molit';
       
       // CCTV 선택 시 테이블 데이터에서 CCTV별 데이터 집계
@@ -676,7 +953,7 @@ export default function DailyStatistics() {
       key: 'time',
       width: 160,
       fixed: 'left' as const,
-      align: 'center',
+      align: 'center' as const,
     },
     {
       title: <div style={{ textAlign: 'center' }}>구역명</div>,
@@ -699,7 +976,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_sum',
           key: 'traffic_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -707,7 +984,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_avg',
           key: 'traffic_avg',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -715,7 +992,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_max',
           key: 'traffic_max',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -728,7 +1005,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_1',
           key: 'congestion_level_1',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -738,7 +1015,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_2',
           key: 'congestion_level_2',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -748,7 +1025,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_3',
           key: 'congestion_level_3',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -763,7 +1040,7 @@ export default function DailyStatistics() {
           dataIndex: 'risk_level_1',
           key: 'risk_level_1',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -773,7 +1050,7 @@ export default function DailyStatistics() {
           dataIndex: 'risk_level_2',
           key: 'risk_level_2',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -783,7 +1060,7 @@ export default function DailyStatistics() {
           dataIndex: 'risk_level_3',
           key: 'risk_level_3',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -793,7 +1070,7 @@ export default function DailyStatistics() {
           dataIndex: 'risk_level_4',
           key: 'risk_level_4',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -808,7 +1085,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_molit_1',
           key: 'congestion_level_molit_1',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -818,7 +1095,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_molit_2',
           key: 'congestion_level_molit_2',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -828,7 +1105,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_molit_3',
           key: 'congestion_level_molit_3',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -838,7 +1115,7 @@ export default function DailyStatistics() {
           dataIndex: 'congestion_level_molit_4',
           key: 'congestion_level_molit_4',
           width: 130,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value?.toLocaleString() || '0'}</span>
           ),
@@ -850,7 +1127,7 @@ export default function DailyStatistics() {
       dataIndex: 'data_count',
       key: 'data_count',
       width: 100,
-      align: 'right',
+      align: 'right' as const,
       render: (value: number) => value?.toLocaleString() || '0',
     },
     {
@@ -861,7 +1138,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_in_avg',
           key: 'traffic_in_avg',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -869,7 +1146,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_in_max',
           key: 'traffic_in_max',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -877,7 +1154,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_in_sum',
           key: 'traffic_in_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -890,7 +1167,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_out_avg',
           key: 'traffic_out_avg',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -898,7 +1175,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_out_max',
           key: 'traffic_out_max',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
         {
@@ -906,7 +1183,7 @@ export default function DailyStatistics() {
           dataIndex: 'traffic_out_sum',
           key: 'traffic_out_sum',
           width: 120,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value?.toLocaleString() || '0',
         },
       ],
@@ -918,9 +1195,6 @@ export default function DailyStatistics() {
       {/* 타이틀 */}
       <div style={{ marginBottom: '24px' }}>
         <Title level={2} style={{ margin: 0 }}>일별 혼잡 현황</Title>
-        <Text type="secondary">
-          일별 혼잡도 통계
-        </Text>
       </div>
 
       {/* 검색 조건 */}
@@ -977,37 +1251,56 @@ export default function DailyStatistics() {
         variant="borderless" 
         style={{ marginBottom: '24px' }}
       >
-        <Tabs
-          activeKey={chartTypeTab}
-          onChange={setChartTypeTab}
-          items={[
-            {
-              key: 'traffic',
-              label: 'Traffic',
-            },
-            {
-              key: 'congestion_ratio',
-              label: '혼잡비율',
-            },
-            {
-              key: 'congestion_ratio_molit',
-              label: '혼잡비율(국토부)',
-            },
-            {
-              key: 'congestion_level',
-              label: '혼잡도',
-            },
-            {
-              key: 'risk_level',
-              label: '혼잡지속도',
-            },
-            {
-              key: 'congestion_level_molit_dist',
-              label: '혼잡도(국토부)',
-            },
-          ]}
-          style={{ marginBottom: '16px' }}
-        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <Tabs
+            activeKey={chartTypeTab}
+            onChange={setChartTypeTab}
+            items={[
+              {
+                key: 'traffic',
+                label: 'Traffic',
+              },
+              {
+                key: 'congestion_ratio',
+                label: '혼잡비율',
+              },
+              {
+                key: 'congestion_ratio_molit',
+                label: '혼잡비율(국토부)',
+              },
+              {
+                key: 'congestion_level',
+                label: '혼잡도',
+              },
+              {
+                key: 'risk_level',
+                label: '혼잡지속도',
+              },
+              {
+                key: 'congestion_level_molit_dist',
+                label: '혼잡도(국토부)',
+              },
+            ]}
+            style={{ flex: 1 }}
+          />
+          <Button 
+            type="default" 
+            icon={<EyeOutlined />}
+            onClick={async () => {
+              // 현재 선택된 값들을 상세보기 모달 상태로 초기화
+              setDetailChartTypeTab(chartTypeTab);
+              setGraphDetailModalOpen(true);
+              
+              // 모달이 열릴 때 데이터 즉시 가져오기
+              if (dateRange && dateRange[0] && dateRange[1]) {
+                await fetchDetailData();
+              }
+            }}
+            style={{ marginLeft: '16px' }}
+          >
+            그래프 상세보기
+          </Button>
+        </div>
         {loading ? (
           <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Spin size="large" />
@@ -1067,11 +1360,128 @@ export default function DailyStatistics() {
             loading={loading}
             pagination={{ pageSize: 20 }}
             scroll={{ x: 'max-content', y: undefined }}
-            variant="bordered"
             size="middle"
           />
         </div>
       </Card>
+
+      {/* 그래프 상세보기 Modal */}
+      <Modal
+        title="그래프 상세보기"
+        open={graphDetailModalOpen}
+        onCancel={() => setGraphDetailModalOpen(false)}
+        footer={null}
+        width="95%"
+        style={{ top: 20, maxWidth: '1800px' }}
+      >
+        <div style={{ maxHeight: '90vh', overflowY: 'auto' }}>
+          {/* 조건 선택 UI */}
+          <Card variant="borderless" style={{ marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              {/* 탭 */}
+              <div style={{ flex: 1 }}>
+                <Tabs
+                  activeKey={detailChartTypeTab}
+                  onChange={setDetailChartTypeTab}
+                  items={[
+                    { key: 'traffic', label: 'Traffic' },
+                    { key: 'congestion_ratio', label: '혼잡비율' },
+                    { key: 'congestion_ratio_molit', label: '혼잡비율(국토부)' },
+                    { key: 'congestion_level', label: '혼잡도' },
+                    { key: 'risk_level', label: '혼잡지속도' },
+                    { key: 'congestion_level_molit_dist', label: '혼잡도(국토부)' },
+                  ]}
+                />
+              </div>
+              
+              {/* 조회조건 표기 */}
+              <div style={{ marginLeft: '24px', padding: '8px 16px', background: '#f5f5f5', borderRadius: '4px', fontSize: '12px' }}>
+                <Text>
+                  <Text strong>조회일자: </Text>
+                  {dateRange && dateRange[0] && dateRange[1] && (
+                    <Text>
+                      {dateRange[0].format('YYYY-MM-DD')} ~ {dateRange[1].format('YYYY-MM-DD')}
+                    </Text>
+                  )}
+                </Text>
+              </div>
+            </div>
+          </Card>
+
+          {/* 전체 + 구역별 그래프 그리드 (1행에 3개씩) */}
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(3, 1fr)', 
+            gap: '12px' 
+          }}>
+            {detailLoading ? (
+              <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '400px' }}>
+                <Spin size="large" />
+              </div>
+            ) : (
+              <>
+                {/* 전체 그래프 */}
+                <div style={{ border: '1px solid #f0f0f0', borderRadius: '4px', padding: '8px', height: '240px', display: 'flex', flexDirection: 'column' }}>
+                  <Title level={5} style={{ marginBottom: '6px', textAlign: 'center', fontSize: '14px', flexShrink: 0 }}>전체</Title>
+                  <div style={{ height: '200px', position: 'relative', flex: 1 }}>
+                    {detailChartData.length > 0 ? (
+                      <Chart 
+                        type="bar" 
+                        data={getChartData(detailChartTypeTab, 'all', detailChartData, detailTableData)} 
+                        options={{
+                          ...getChartOptions(detailChartTypeTab),
+                          maintainAspectRatio: false,
+                          plugins: {
+                            ...getChartOptions(detailChartTypeTab).plugins,
+                            legend: {
+                              display: false,
+                            },
+                          },
+                        }} 
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                        <Text type="secondary">데이터가 없습니다.</Text>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 구역별 그래프 */}
+                {regions.map(region => (
+                  <div key={region.region_id} style={{ border: '1px solid #f0f0f0', borderRadius: '4px', padding: '8px', height: '240px', display: 'flex', flexDirection: 'column' }}>
+                    <Title level={5} style={{ marginBottom: '6px', textAlign: 'center', fontSize: '14px', flexShrink: 0 }}>
+                      {region.region_name}
+                    </Title>
+                    <div style={{ height: '200px', position: 'relative', flex: 1 }}>
+                      {detailChartData.length > 0 ? (
+                        <Chart 
+                          type="bar" 
+                          data={getChartData(detailChartTypeTab, region.region_id, detailChartData, detailTableData)} 
+                          options={{
+                            ...getChartOptions(detailChartTypeTab, true),
+                            maintainAspectRatio: false,
+                            plugins: {
+                              ...getChartOptions(detailChartTypeTab, true).plugins,
+                              legend: {
+                                display: false,
+                              },
+                            },
+                          }} 
+                        />
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                          <Text type="secondary">데이터가 없습니다.</Text>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -19,6 +19,7 @@ const MonthlyStatistics = lazy(() => import('./modules/statistics/MonthlyStatist
 
 // ===== 관리 모듈 =====
 const CCTVManagement = lazy(() => import('./modules/management/CCTVManagement'));
+const DataManagement = lazy(() => import('./modules/management/DataManagement'));
 
 // ===== 공통 컴포넌트 =====
 const NotFound = lazy(() => import('./components/layout/NotFound'));
@@ -106,6 +107,14 @@ export default function AppRoutes() {
           element={
             <Suspense fallback={<PageLoader />}>
               <CCTVManagement />
+            </Suspense>
+          } 
+        />
+        <Route 
+          path="management/data-management" 
+          element={
+            <Suspense fallback={<PageLoader />}>
+              <DataManagement />
             </Suspense>
           } 
         />

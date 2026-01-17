@@ -113,10 +113,17 @@ dev-up: net-create
 		echo "❌ $(DEV_ENV_FILE) 파일이 없습니다. env.dev.example을 복사하여 생성하세요."; \
 		exit 1; \
 	fi
-	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) up -d --build
-	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) ps
+	@mkdir -p logs
+	@chmod 755 logs 2>/dev/null || true
+	@echo "🔨 개발 환경 컨테이너 시작 중..."
+	@echo "   (의존성 설치가 필요하면 자동으로 설치됩니다)"
+	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) up -d web
+	@echo "⏳ 컨테이너 시작 대기 중..."
+	@sleep 3
+	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) ps web
 	@echo "✅ 개발 환경 서비스 시작 완료"
 	@echo "WEB: http://localhost:$$(grep APP_PORT $(DEV_ENV_FILE) | cut -d'=' -f2 | tr -d ' ')"
+	@echo "💡 로그 확인: make dev-logs"
 
 dev-down:
 	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) down
@@ -130,7 +137,7 @@ dev-logs:
 	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) logs -f --tail=$(LOG_TAIL) web
 
 dev-ps:
-	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) ps
+	$(DEV_COMPOSE) --env-file $(DEV_ENV_FILE) ps web
 
 # =========================
 # 운영 환경 (Production)
@@ -143,8 +150,12 @@ prod-up: net-create
 		echo "❌ $(PROD_ENV_FILE) 파일이 없습니다. env.prod.example을 복사하여 생성하세요."; \
 		exit 1; \
 	fi
-	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) up -d --build
-	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) ps
+	@mkdir -p logs
+	@chmod 755 logs 2>/dev/null || true
+	@echo "🔨 이미지 빌드 및 컨테이너 시작 중..."
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) build --progress=plain
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) up -d web
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) ps web
 	@echo "✅ 운영 환경 서비스 시작 완료"
 	@echo "WEB: http://localhost:$$(grep APP_PORT $(PROD_ENV_FILE) | cut -d'=' -f2 | tr -d ' ')"
 
@@ -160,7 +171,7 @@ prod-logs:
 	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) logs -f --tail=$(LOG_TAIL) web
 
 prod-ps:
-	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) ps
+	$(PROD_COMPOSE) --env-file $(PROD_ENV_FILE) ps web
 
 # -------------------------
 # 빌드/미리보기 (도커 외부)

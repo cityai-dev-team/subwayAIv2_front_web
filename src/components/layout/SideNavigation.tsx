@@ -74,6 +74,12 @@ const sideNavItems: SideNavItem[] = [
         label: 'CCTV 관리',
         path: '/management/cctv-management',
         description: 'CCTV 관리'
+        },
+        {
+        id: 'data-management',
+        label: '데이터 관리',
+        path: '/management/data-management',
+        description: '5분 데이터 조회 및 다운로드'
         }
     ]
   }

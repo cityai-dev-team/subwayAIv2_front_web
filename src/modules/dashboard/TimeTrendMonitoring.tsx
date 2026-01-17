@@ -410,7 +410,7 @@ export default function TimeTrendMonitoring() {
       key: 'time',
       width: 100,
       fixed: 'left' as const,
-      align: 'center',
+      align: 'center' as const,
       sorter: (a: TableData, b: TableData) => {
         // 시간 문자열을 직접 비교 (HH:MM 형식)
         const timeA = a.time.split(':').map(Number);
@@ -419,7 +419,7 @@ export default function TimeTrendMonitoring() {
         const totalB = timeB[0] * 60 + timeB[1];
         return totalB - totalA; // 내림차순
       },
-      sortDirections: ['descend', 'ascend'] as const,
+      sortDirections: ['descend', 'ascend'] as ('descend' | 'ascend')[],
       defaultSortOrder: 'descend' as const,
     },
     {
@@ -437,7 +437,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'traffic_sum',
           key: 'traffic_sum',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value.toLocaleString(),
         },
         {
@@ -445,7 +445,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'traffic_avg',
           key: 'traffic_avg',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => Math.round(value).toLocaleString(),
         },
         {
@@ -453,7 +453,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'traffic_max',
           key: 'traffic_max',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => value.toLocaleString(),
         },
       ],
@@ -466,7 +466,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_하',
           key: 'congestion_하',
           width: 80,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value.toLocaleString()}</span>
           ),
@@ -476,7 +476,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_중',
           key: 'congestion_중',
           width: 80,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value.toLocaleString()}</span>
           ),
@@ -486,7 +486,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_상',
           key: 'congestion_상',
           width: 80,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value.toLocaleString()}</span>
           ),
@@ -501,7 +501,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'risk_관심',
           key: 'risk_관심',
           width: 90,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value.toLocaleString()}</span>
           ),
@@ -511,7 +511,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'risk_주의',
           key: 'risk_주의',
           width: 90,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value.toLocaleString()}</span>
           ),
@@ -521,7 +521,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'risk_경계',
           key: 'risk_경계',
           width: 90,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value.toLocaleString()}</span>
           ),
@@ -531,7 +531,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'risk_심각',
           key: 'risk_심각',
           width: 90,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value.toLocaleString()}</span>
           ),
@@ -546,7 +546,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_보통',
           key: 'congestion_보통',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#52c41a' }}>{value.toLocaleString()}</span>
           ),
@@ -556,7 +556,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_주의',
           key: 'congestion_주의',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#faad14' }}>{value.toLocaleString()}</span>
           ),
@@ -566,7 +566,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_혼잡',
           key: 'congestion_혼잡',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#fa8c16' }}>{value.toLocaleString()}</span>
           ),
@@ -576,7 +576,7 @@ export default function TimeTrendMonitoring() {
           dataIndex: 'congestion_심각',
           key: 'congestion_심각',
           width: 100,
-          align: 'right',
+          align: 'right' as const,
           render: (value: number) => (
             <span style={{ color: '#f5222d' }}>{value.toLocaleString()}</span>
           ),
@@ -592,9 +592,6 @@ export default function TimeTrendMonitoring() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <AntTitle level={2} style={{ margin: 0 }}>시간별 모니터링</AntTitle>
-            <Text type="secondary">
-              최근 1시간 혼잡도 추이 (1분 단위)
-            </Text>
           </div>
           {lastUpdated && (
             <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
@@ -682,7 +679,6 @@ export default function TimeTrendMonitoring() {
           pagination={{ pageSize: 20 }}
           scroll={{ x: 1500, y: 600 }}
           sticky={{ offsetHeader: 0 }}
-          variant="bordered"
           size="middle"
         />
       </Card>

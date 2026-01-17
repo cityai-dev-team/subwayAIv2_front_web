@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Card, Typography, Spin, Row, Col, Progress } from 'antd';
-import { WarningOutlined } from '@ant-design/icons';
+import { Card, Typography, Spin, Row, Col, Progress, Space } from 'antd';
+import { WarningOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { api } from '../../lib/api';
 import { getRiskColor } from './utils/riskUtils';
 
@@ -11,7 +11,8 @@ interface CCTVData {
   cctv_name: string;
   region_id: string;
   region_name: string;
-  traffic: number;  // 게이지에 사용할 값 (최대 100명)
+  traffic: number;  // 통행량
+  congestion_ratio: number;  // 혼잡비율 (%)
   risk_level: string;  // 아이콘 색상에 사용
 }
 
@@ -25,29 +26,29 @@ export default function CCTVMonitoring() {
 
   // 혼잡도 레벨 - API에서 받은 데이터를 그대로 사용 (계산하지 않음)
   // API에서 congestion_level_molit 필드로 혼잡도 레벨을 제공해야 함
-  const getCongestionLevel = (molitLevel?: string): '보통' | '주의' | '혼잡' | '심각' => {
-    if (!molitLevel) return '보통';
-    if (molitLevel === '보통' || molitLevel === '주의' || molitLevel === '혼잡' || molitLevel === '심각') {
-      return molitLevel;
-    }
-    return '보통'; // 기본값
-  };
+  // const getCongestionLevel = (molitLevel?: string): '보통' | '주의' | '혼잡' | '심각' => {
+  //   if (!molitLevel) return '보통';
+  //   if (molitLevel === '보통' || molitLevel === '주의' || molitLevel === '혼잡' || molitLevel === '심각') {
+  //     return molitLevel;
+  //   }
+  //   return '보통'; // 기본값
+  // };
 
   // 혼잡도 레벨에 따른 색상
-  const getCongestionLevelColor = (level: '보통' | '주의' | '혼잡' | '심각'): string => {
-    switch (level) {
-      case '심각':
-        return '#f5222d';
-      case '혼잡':
-        return '#fa8c16';
-      case '주의':
-        return '#faad14';
-      case '보통':
-        return '#52c41a';
-      default:
-        return '#52c41a';
-    }
-  };
+  // const getCongestionLevelColor = (level: '보통' | '주의' | '혼잡' | '심각'): string => {
+  //   switch (level) {
+  //     case '심각':
+  //       return '#f5222d';
+  //     case '혼잡':
+  //       return '#fa8c16';
+  //     case '주의':
+  //       return '#faad14';
+  //     case '보통':
+  //       return '#52c41a';
+  //     default:
+  //       return '#52c41a';
+  //   }
+  // };
 
   // 구간별 색상 (더 명확하고 밝은 색상)
   const getRegionCardColor = (regionName: string, index: number): { background: string; border: string } => {
@@ -176,6 +177,7 @@ export default function CCTVMonitoring() {
             return {
               ...cctv,
               traffic: 0,
+              congestion_ratio: 0,
               risk_level: '관심',
             };
           });
@@ -224,6 +226,7 @@ export default function CCTVMonitoring() {
             traffic_in: number;
             traffic_out: number;
             traffic: number;
+            congestion_percentage: number;
             risk_level: string;
           }> 
         }>('/report/setting/getCCTVList');
@@ -244,6 +247,7 @@ export default function CCTVMonitoring() {
               return {
                 ...cctv,
                 traffic: cctvData.traffic || 0,
+                congestion_ratio: cctvData.congestion_percentage || 0,
                 risk_level: cctvData.risk_level || '관심',
               };
             } else {
@@ -251,6 +255,7 @@ export default function CCTVMonitoring() {
               return {
                 ...cctv,
                 traffic: 0,
+                congestion_ratio: 0,
                 risk_level: '관심',
               };
             }
@@ -282,30 +287,35 @@ export default function CCTVMonitoring() {
 
   return (
     <div style={{ padding: '24px', background: '#f0f2f5', minHeight: '100vh' }}>
-      {/* 타이틀 */}
-      <div style={{ marginBottom: '24px' }}>
-        <Title level={2} style={{ margin: 0 }}>CCTV별 모니터링</Title>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '8px' }}>
-          <Text type="secondary">
-            실시간 CCTV별 혼잡도를 종합적으로 나타낸 모니터링
-          </Text>
-          {lastUpdateTime && (() => {
-            const year = lastUpdateTime.getFullYear();
-            const month = lastUpdateTime.getMonth() + 1;
-            const day = lastUpdateTime.getDate();
-            const hours = lastUpdateTime.getHours();
-            const minutes = lastUpdateTime.getMinutes().toString().padStart(2, '0');
-            const seconds = lastUpdateTime.getSeconds().toString().padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-            
-            return (
-              <Text type="secondary" style={{ fontSize: '12px', color: '#8c8c8c' }}>
-                마지막 업데이트: {year}. {month}. {day}. {ampm} {displayHours}:{minutes}:{seconds}
-              </Text>
-            );
-          })()}
+      {/* 헤더 */}
+      <div style={{ marginBottom: '24px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', width: '100%' }}>
+        {/* 왼쪽: 타이틀 */}
+        <div style={{ flex: 1 }}>
+          <Title level={2} style={{ margin: 0 }}>CCTV별 모니터링</Title>
         </div>
+        
+        {/* 오른쪽: 마지막 업데이트 */}
+        {lastUpdateTime && (() => {
+          const year = lastUpdateTime.getFullYear();
+          const month = lastUpdateTime.getMonth() + 1;
+          const day = lastUpdateTime.getDate();
+          const hours = lastUpdateTime.getHours();
+          const minutes = lastUpdateTime.getMinutes().toString().padStart(2, '0');
+          const seconds = lastUpdateTime.getSeconds().toString().padStart(2, '0');
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours % 12 || 12;
+          
+          return (
+            <div style={{ flexShrink: 0, marginLeft: '24px' }}>
+              <Space>
+                <ClockCircleOutlined style={{ color: '#8c8c8c' }} />
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  마지막 업데이트: {year}. {month}. {day}. {ampm} {displayHours}:{minutes}:{seconds}
+                </Text>
+              </Space>
+            </div>
+          );
+        })()}
       </div>
 
       {regions.length === 0 ? (
@@ -399,10 +409,10 @@ export default function CCTVMonitoring() {
                   ) : (
                     cctvs.map(cctv => {
                       const riskColor = getRiskColor(cctv.risk_level);
-                      // traffic 값을 게이지 값으로 사용 (최대 300명 기준으로 퍼센트 계산)
-                      const maxTraffic = 300;
+                      // 혼잡비율을 게이지 값으로 사용 (최대 100%로 제한)
+                      const congestionRatio = typeof cctv.congestion_ratio === 'number' ? cctv.congestion_ratio : 0;
+                      const percent = Math.min(100, Math.max(0, congestionRatio));
                       const trafficValue = typeof cctv.traffic === 'number' ? cctv.traffic : 0;
-                      const percent = Math.min(100, Math.max(0, (trafficValue / maxTraffic) * 100));
                       
                       // CCTV 카드는 종합 모니터링과 동일한 색상으로 통일
                       const headerBgColor = '#1f1f1f'; // 종합 모니터링과 동일
@@ -462,9 +472,9 @@ export default function CCTVMonitoring() {
                                 strokeColor={riskColor}
                                 trailColor={trailColor}
                                 showInfo={true}
-                                format={(percent) => (
+                                format={(_percent) => (
                                   <span style={{ color: '#ffffff', fontSize: '16px', fontWeight: 'bold' }}>
-                                    {trafficValue}명
+                                    {congestionRatio.toFixed(1)}%
                                   </span>
                                 )}
                                 strokeWidth={10}

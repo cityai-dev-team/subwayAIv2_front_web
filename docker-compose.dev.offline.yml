@@ -1,0 +1,59 @@
+name: ${PROJECT}_front_web_dev
+services:
+  web:
+    image: node:20-alpine
+    container_name: ${C_WEB}
+    env_file:
+      - .env.dev
+    environment:
+      - VITE_API_BASE=${VITE_API_BASE}
+      - VITE_API_PREFIX=${VITE_API_PREFIX}
+      - VITE_APP_TITLE=${VITE_APP_TITLE}
+      - VITE_APP_VERSION=${VITE_APP_VERSION}
+      - VITE_API_PROXY_TARGET=${VITE_API_PROXY_TARGET:-http://subwayaiv2-api-web-dev:8001}
+      - RUN_MODE=docker
+    working_dir: /app
+    ports:
+      - "${APP_PORT:-3001}:3001"
+    networks:
+      - net
+    volumes:
+      - .:/app
+      - /app/node_modules
+      # 의존성 디렉토리 마운트 (실행 시 참조용)
+      - type: bind
+        source: ${DEPENDENCIES_DIR:-../subwayAIv2_images/front_web}
+        target: /dependencies
+        read_only: true
+    command:
+      - sh
+      - -c
+      - |
+        if [ -d /dependencies/npm-packages ] && ls /dependencies/npm-packages/*.tgz 1> /dev/null 2>&1; then
+          echo '오프라인 모드: 로컬 npm 패키지 사용'
+          npm cache clean --force 2>/dev/null || true
+          npm install --prefer-offline --no-audit --no-fund || npm install --no-audit --no-fund
+        else
+          echo '온라인 모드: 네트워크에서 다운로드'
+          npm cache clean --force 2>/dev/null || true
+          npm install --prefer-online --no-audit --no-fund
+        fi
+        npm run dev -- --host 0.0.0.0 --port 3001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+networks:
+  net:
+    external: true
+    name: ${NET}
+
+
